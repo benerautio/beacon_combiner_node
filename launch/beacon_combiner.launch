@@ -18,5 +18,6 @@
 
     <node pkg="combiner_node" type = "beacon_brd_combiner.py" name="combiner">
         <param name="vehicle_name" value = "$(arg vehicle)"/>
+    </node>
 
 </launch>
