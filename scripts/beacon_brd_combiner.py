@@ -15,7 +15,7 @@ class COMBINER:
         self.pub_sol_status = rospy.Publisher('/'+robot_ns+'/beacon/solenoid_pos', ServoStatus, queue_size=10)
 
         #subscribe to combined release_beacon topic
-        self.sub_drop = rospy.Subscriber('/'+robot_ns+'beacon/release_beacon', SetChannel, self.combined_release_cb)
+        self.sub_drop = rospy.Subscriber('/'+robot_ns+'/beacon/release_beacon', SetChannel, self.combined_release_cb)
 
         #subscribe to base station
         #self.sub_deploy = rospy.Subscriber('/'+robot_ns+'/deploy',Bool,self.deploy_cb)
