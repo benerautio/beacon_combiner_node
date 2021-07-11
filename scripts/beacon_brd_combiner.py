@@ -9,20 +9,24 @@ class COMBINER:
 
         #Subscribe to both boards solenoid status
         self.sub_sol_brd_0 = rospy.Subscriber('/'+robot_ns+'/beacon_board_0/solenoid_pos', ServoStatus, self.sol_stat_brd_0_cb)
-        self.sub_sol_brd_1 = rospy.Subscriber('/'+robot_ns+'/beacon_board_1/solenoid_pos', ServoStatus, self.sol_stat_brd_1_cb)
+        
+        #comment out for testing
+        #self.sub_sol_brd_1 = rospy.Subscriber('/'+robot_ns+'/beacon_board_1/solenoid_pos', ServoStatus, self.sol_stat_brd_1_cb)
 
         #publisher to combined solenoid status topic 
         self.pub_sol_status = rospy.Publisher('/'+robot_ns+'/beacon/solenoid_pos', ServoStatus, queue_size=10)
 
         #subscribe to combined release_beacon topic
-        self.sub_drop = rospy.Subscriber('/'+robot_ns+'beacon/release_beacon', SetChannel, self.combined_release_cb)
+        self.sub_drop = rospy.Subscriber('/'+robot_ns+'/beacon/release_beacon', SetChannel, self.combined_release_cb)
 
         #subscribe to base station
         #self.sub_deploy = rospy.Subscriber('/'+robot_ns+'/deploy',Bool,self.deploy_cb)
 
         #create publisher to both boards' release_beacon topic
         self.pub_release_beacon_brd_0 = rospy.Publisher('/'+robot_ns+'/beacon_board_0/release_beacon',SetChannel,queue_size=10)
-        self.pub_release_beacon_brd_1 = rospy.Publisher('/'+robot_ns+'/beacon_board_1/release_beacon',SetChannel,queue_size=10)
+
+        #commented out for testing
+        #self.pub_release_beacon_brd_1 = rospy.Publisher('/'+robot_ns+'/beacon_board_1/release_beacon',SetChannel,queue_size=10)
 
 
 
@@ -75,9 +79,10 @@ class COMBINER:
     def combined_release_cb(self, msg):
         if msg.id <= 3 and msg.id >= 0:
             self.pub_release_beacon_brd_0.publish(msg)
-        elif msg.id <=7 and msg.id >= 4:
-            msg.id=msg.id-self.beacons_per_board
-            self.pub_release_beacon_brd_1.publish(msg)
+        #commented out for testing
+        # elif msg.id <=7 and msg.id >= 4:
+        #     msg.id=msg.id-self.beacons_per_board
+        #     self.pub_release_beacon_brd_1.publish(msg)
         else:
             rospy.logwarn('Undefined Solenoid Channel')
         
