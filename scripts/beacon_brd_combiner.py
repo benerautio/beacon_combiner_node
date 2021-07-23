@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+#TODO: fix for if solenoid status stops publishing??
+
 import rospy
 import numpy as np
 from estop_msgs.msg import ServoStatus, SetChannel
@@ -31,18 +33,22 @@ class COMBINER:
         # 8 beacons, is only 1 while solenoid is on, then is zero after beacon drops. 
         self.sol_state = [0,0,0,0,0,0,0,0]
 
-        #This is to check if a beacon deployed successfully. Whenever relay state changes to 1, 
-        #corresponding element in the array becomes 1, indicating a successful drop
-        self.dep_check = np.array([0,0,0,0,0,0,0,0])
-
-        # Therefore need a variable to keep track of how many beacons are dropped
-        # When this is 7, all beacons are dropped.
+        # need a variable to keep track of how many beacons are dropped
+        self.drop_time = 0
+        self.dropper_timeout = rospy.Time(5)
+        self.drop_in_progress = False
         self.dropped_beacons = 0
+        #Available = 0, Bad = -1, Dropped = 1
+        self.beacon_state = np.zeros(8, dtype=int)
         self.beacons_per_board = 4
+        self.current_beacon = 0
 
-    #gets executed whenever relay state changes, updates array of deployed beacons, deployed = 1
+    #gets executed whenever relay state changes
     def deployment_check_cb(self, msg):
-        self.dep_check += msg.position
+        pass
+
+    def get_beacon_status(self):
+        return self.beacon_state[self.current_beacon]
 
     #subscribers to individual solenoid status should publish to the combined topic
     def sol_stat_brd_0_cb(self, msg):
@@ -50,6 +56,29 @@ class COMBINER:
         combined_sol_status = ServoStatus()
         combined_sol_status.position = self.sol_state
         self.pub_sol_status.publish(combined_sol_status)
+
+        #check feedback for drop in progress, only if drop is in progress?
+        if(self.drop_in_progress):
+            if (msg.position[self.current_beacon] >= 100):
+                rospy.loginfo("Successful drop, marking beacon as dropped and selecting new beacon")
+                self.drop_in_progress = False
+                self.dropped_beacons+=1
+                self.beacon_state[self.current_beacon] = 1
+                #successful drop!
+
+            elif (rospy.Time.now() - self.drop_time > self.dropper_timeout):
+                #unsuccessful drop
+                rospy.loginfo("Unsuccessful drop, marking beacon as bad and selecting new beacon")
+                self.beacon_state[self.current_beacon] = -1
+                self.drop_in_progress = False
+                
+    def select_beacon(self):
+        for beacon in range(0,len(self.beacon_state)):
+            if self.beacon_state[beacon] == 0:
+                self.current_beacon = beacon
+                return
+        rospy.loginfo("No more Beacons to drop!")
+
     
     #subscribers to individual solenoid status should publish to the combined topic
     def sol_stat_brd_1_cb(self, msg):
@@ -57,6 +86,21 @@ class COMBINER:
         combined_sol_status = ServoStatus()
         combined_sol_status.position = self.sol_state
         self.pub_sol_status.publish(combined_sol_status)
+
+         #check feedback for drop in progress, only if drop is in progress?
+        if(self.drop_in_progress):
+            if (msg.position[self.current_beacon - self.beacons_per_board] >= 100):
+                rospy.loginfo("Successful drop, marking beacon as dropped and selecting new beacon")
+                self.drop_in_progress = False
+                self.dropped_beacons+=1
+                self.beacon_state[self.current_beacon] = 1
+                #successful drop!
+
+            elif (rospy.Time.now() - self.drop_time > self.dropper_timeout):
+                #unsuccessful drop
+                rospy.loginfo("Unsuccessful drop, marking beacon as bad and selecting new beacon")
+                self.beacon_state[self.current_beacon] = -1
+                self.drop_in_progress = False
     
     def release_brd_0_cb(self, msg):
         rospy.logdebug("releasing a beacon on board 0")
@@ -68,30 +112,19 @@ class COMBINER:
         if msg.data == True:
             if (self.dropped_beacons > 7):
                 rospy.logwarn("Tried to drop more than 8 beacons!")
-                return 
+                return
             drop = SetChannel()
             drop.state = 1
-            drop.id = self.dropped_beacons
 
-            self.combined_release_cb(drop)
-
-            #check if beacon deployed successfully
-            if (self.dep_check[self.dropped_beacons] > 0):
-                rospy.loginfo("beacon dropped successfully")
-                self.dropped_beacons = self.dropped_beacons + 1
-                rospy.loginfo("dropped beacons: %d" % self.dropped_beacons)
-                if self.dropped_beacons == 4:
-                    rospy.logwarn('beacon board 0 now empty')
-                elif self.dropped_beacons >= 8:
-                    rospy.logwarn('beacon board 1 now empty')
-                    rospy.logwarn('No more beacons to drop')
-            elif (self.dep_check[self.dropped_beacons] == 0):
-                rospy.logwarn("beacon drop failed")
+            #select a beacon based on status, problem here
+            self.select_beacon()
+            drop.id = self.current_beacon
+            if (self.get_beacon_status() == 0):
+                self.drop_in_progress = True
+                self.drop_time = rospy.Time.now()
+                self.combined_release_cb(drop)
             else:
-                # print(self.dep_check)
-                # print(drop.id)
-                # print(self.dep_check[drop.id])
-                rospy.logwarn("tried to drop the same beacon twice")
+                rospy.logwarn("Caught bad beacon deployment, no beacon dropped")
 
     #this is what makes the two different topics behave as one
     #if the channel is 0-3, this goes to board 0. If it is 4-7, this goes to board 1
@@ -103,7 +136,6 @@ class COMBINER:
             rospy.loginfo("trying to release beacon...")
             msg.id=msg.id-self.beacons_per_board
             self.pub_release_beacon_brd_1.publish(msg)
-            #msg.id+=self.beacons_per_board
         else:
             rospy.logwarn('Undefined Solenoid Channel, no dropped beacon')
         
