@@ -8,7 +8,7 @@ from estop_msgs.msg import ServoStatus, SetChannel
 from std_msgs.msg import Bool
 
 class COMBINER:
-    def __init__(self, robot_ns):
+    def __init__(self, robot_ns, num_beacons_brd_0, num_beacons_brd_1):
 
         #Subscribe to both boards solenoid status
         self.sub_sol_brd_0 = rospy.Subscriber('/'+robot_ns+'/beacon_board_0/solenoid_pos', ServoStatus, self.sol_stat_brd_0_cb)
@@ -30,7 +30,6 @@ class COMBINER:
         self.pub_release_beacon_brd_1 = rospy.Publisher('/'+robot_ns+'/beacon_board_1/release_beacon',SetChannel,queue_size=10)
 
         # some variables for solenoid state
-        # 8 beacons, is only 1 while solenoid is on, then is zero after beacon drops. 
         self.sol_state = [0,0,0,0,0,0,0,0]
 
         # need a variable to keep track of how many beacons are dropped
@@ -38,10 +37,14 @@ class COMBINER:
         self.dropper_timeout = rospy.Time(5)
         self.drop_in_progress = False
         self.dropped_beacons = 0
-        #Available = 0, Bad = -1, Dropped = 1
-        self.beacon_state = np.zeros(8, dtype=int)
+        #Available = 0, Bad = -1, Dropped = 1. Mark unloaded beacons as dropped
+        self.num_beacons_0 = num_beacons_brd_0
+        self.num_beacons_1 = num_beacons_brd_1
         self.beacons_per_board = 4
-        self.current_beacon = 0
+        self.beacon_state = np.ones(2*self.beacons_per_board, dtype=int)
+        self.beacon_state[0:self.num_beacons_0] = np.zeros(self.num_beacons_0)
+        self.beacon_state[self.beacons_per_board:(self.beacons_per_board + self.num_beacons_1)] = np.zeros(self.num_beacons_1)
+        self.current_beacon = self.select_beacon()
 
     #gets executed whenever relay state changes
     def deployment_check_cb(self, msg):
@@ -142,8 +145,10 @@ class COMBINER:
 
 def main():
     rospy.init_node('beacon_combiner')
-    robot_ns = rospy.get_param('~robot_ns', 'H01')
-    beacon_combiner = COMBINER(robot_ns)
+    robot_ns = rospy.get_param('~vehicle_name', 'H01')
+    num_beacons_brd_0 = rospy.get_param('~num_beacons_brd_0', 3)
+    num_beacons_brd_1 = rospy.get_param('~num_beacons_brd_1', 3)
+    beacon_combiner = COMBINER(robot_ns, num_beacons_brd_0, num_beacons_brd_1)
     while not rospy.is_shutdown():
         rospy.spin()
 

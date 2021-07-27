@@ -1,6 +1,8 @@
 <launch>
-    <arg name="vehicle"         default="H01"/>
-    <arg name="enable_beacon"   default="1"/>
+    <arg name="vehicle"             default="H01"/>
+    <arg name="enable_beacon"       default=1/>
+    <arg name="num_beacons_brd_0"   default=3/>
+    <arg name="num_beacons_brd_1"   default=3/>
 
     <group ns="beacon_board_0" if="$(arg enable_beacon)">
         <!-- ROSSERIAL PYTHON -->
@@ -18,6 +20,8 @@
 
     <node pkg="combiner_node" type = "beacon_brd_combiner.py" name="combiner">
         <param name="vehicle_name" value = "$(arg vehicle)"/>
+        <param name="num_beacons_brd_0" value = $(arg num_beacons_brd_0)/>
+        <param name="num_beacons_brd_1" value = $(arg num_beacons_brd_1)/>
     </node>
 
 </launch>
