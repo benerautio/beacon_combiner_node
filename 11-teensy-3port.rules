@@ -1,0 +1,11 @@
+#UDev rules to handle a multiple-port USB device. Core problem is that interface numbers (and hence port ID) aren't on the same node as the tty system
+#Save the interface number to a local variable
+SUBSYSTEMS=="usb", ENV{.LOCAL_ifNum}="$attr{bInterfaceNumber}"
+#Which we can then use to name all ports
+SUBSYSTEM=="tty", MODE="0666", KERNEL=="ttyACM[0-9]*", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="048c", ATTRS{serial}=="7701440", SYMLINK+="teensy_b0_port%E{.LOCAL_ifNum}"
+#Or create a rule to match a single port
+SUBSYSTEM=="tty", MODE="0666", KERNEL=="ttyACM[0-9]*", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="048c", ATTRS{serial}=="7701440", ENV{.LOCAL_ifNum}=="00", SYMLINK+="teensy_b0_first_port"
+
+SUBSYSTEM=="tty", MODE="0666", KERNEL=="ttyACM[0-9]*", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="048c", ATTRS{serial}=="7694220", SYMLINK+="teensy_b1_port%E{.LOCAL_ifNum}"
+SUBSYSTEM=="tty", MODE="0666", KERNEL=="ttyACM[0-9]*", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="048c", ATTRS{serial}=="7694220", ENV{.LOCAL_ifNum}=="00", SYMLINK+="teensy_b1_first_port"
+
