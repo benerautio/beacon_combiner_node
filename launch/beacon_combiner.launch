@@ -4,14 +4,12 @@
     <arg name="num_beacons_brd_0"   default="3"/>
     <arg name="num_beacons_brd_1"   default="3"/>
 
-    <group ns="beacon_board_0" if="$(arg enable_beacon)">
+    <group ns="$(arg vehicle)" if="$(arg enable_beacon)">
         <!-- ROSSERIAL PYTHON -->
         <node pkg="rosserial_python" type="serial_node.py" name="beacon_dropper_0" output="log">
             <param name="port" value="/dev/teensy_b0_first_port"/>
         </node>
-    </group>
-
-    <group ns="beacon_board_1" if="$(arg enable_beacon)">
+    
         <!-- ROSSERIAL PYTHON -->
         <node pkg="rosserial_python" type="serial_node.py" name="beacon_dropper_1" output="log">
             <param name="port" value="/dev/teensy_b1_first_port"/>
