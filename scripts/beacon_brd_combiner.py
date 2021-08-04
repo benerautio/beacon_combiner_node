@@ -10,9 +10,9 @@ from std_msgs.msg import Bool
 class COMBINER:
     def __init__(self, robot_ns, num_beacons_brd_0, num_beacons_brd_1):
 
-        #Subscribe to both boards solenoid status
-        self.sub_sol_brd_0 = rospy.Subscriber('/'+robot_ns+'/beacon_board_0/solenoid_pos', ServoStatus, self.sol_stat_brd_0_cb)
-        self.sub_sol_brd_1 = rospy.Subscriber('/'+robot_ns+'/beacon_board_1/solenoid_pos', ServoStatus, self.sol_stat_brd_1_cb)
+        #Subscribe to both boards' solenoid status
+        self.sub_sol_brd_0 = rospy.Subscriber('/'+robot_ns+'/beacon_b0/solenoid_pos', ServoStatus, self.sol_stat_brd_0_cb)
+        self.sub_sol_brd_1 = rospy.Subscriber('/'+robot_ns+'/beacon_b1/solenoid_pos', ServoStatus, self.sol_stat_brd_1_cb)
 
         #publisher to combined solenoid status topic
         self.pub_sol_status = rospy.Publisher('/'+robot_ns+'/beacon/solenoid_pos', ServoStatus, queue_size=10)
@@ -26,15 +26,15 @@ class COMBINER:
         self.sub_deploy = rospy.Subscriber('/'+robot_ns+'/deploy',Bool,self.deploy_cb)
 
         #create publisher to both boards' release_beacon topic
-        self.pub_release_beacon_brd_0 = rospy.Publisher('/'+robot_ns+'/beacon_board_0/release_beacon',SetChannel,queue_size=10)
-        self.pub_release_beacon_brd_1 = rospy.Publisher('/'+robot_ns+'/beacon_board_1/release_beacon',SetChannel,queue_size=10)
+        self.pub_release_beacon_brd_0 = rospy.Publisher('/'+robot_ns+'/beacon_b0/release_beacon',SetChannel,queue_size=10)
+        self.pub_release_beacon_brd_1 = rospy.Publisher('/'+robot_ns+'/beacon_b1/release_beacon',SetChannel,queue_size=10)
 
         # some variables for solenoid state
         self.sol_state = [0,0,0,0,0,0,0,0]
 
         # need a variable to keep track of how many beacons are dropped
         self.drop_time = 0
-        self.dropper_timeout = rospy.Time(5)
+        self.dropper_timeout = rospy.Duration(secs=5)
         self.drop_in_progress = False
         self.dropped_beacons = 0
         #Available = 0, Bad = -1, Dropped = 1. Mark unloaded beacons as dropped
@@ -62,7 +62,7 @@ class COMBINER:
 
         #check feedback for drop in progress, only if drop is in progress?
         if(self.drop_in_progress):
-            if (msg.position[self.current_beacon] >= 100):
+            if (msg.position[self.current_beacon] >= 50):
                 rospy.loginfo("Successful drop, marking beacon as dropped and selecting new beacon")
                 self.drop_in_progress = False
                 self.dropped_beacons+=1
