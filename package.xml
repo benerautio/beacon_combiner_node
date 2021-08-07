@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>combiner_node</name>
+  <name>beacon_combiner_node</name>
   <version>0.0.0</version>
   <description>The combiner_node package</description>
 
